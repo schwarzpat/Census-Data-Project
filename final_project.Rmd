@@ -1,0 +1,138 @@
+---
+title: "Untitled"
+author: "Patrick Schwarz"
+date: "13 Januar 2020"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+INITIAL LOADING OF PACKAGES AND THE DATASET
+```{r}
+library(xtable)
+library(stargazer)
+library(ggplot2) #this cunks starts ggplot2
+library(hrbrthemes)
+library(pgirmess)
+library(plyr)
+```
+
+```{r}
+
+all_data <-  read.csv("adults 94.csv", 
+                 header = TRUE,
+                 sep= ";")
+
+phds <-  read.csv("phds.csv", 
+                 header = TRUE,
+                 sep= ";") 
+
+hourly_paid_adults <-all_data[all_data$wage_per_hour >0,]
+
+```
+
+
+HYPOTHESIS 1
+```{r}
+
+ggplot(hourly_paid_adults, aes(x=wage_per_hour)) + geom_histogram(binwidth = 100) +
+  labs(caption= "Figure 1: Histogram ?o assess the distribution of the dependent variable") +
+  xlab("wage per hour in cents") + 
+  ylab("respondent count") +
+  theme(plot.caption = element_text(hjust=0.5, size=rel(1)))
+
+ggplot(hourly_paid_adults, aes(x=wage_per_hour, fill=sex)) +
+    geom_histogram(binwidth=100, alpha=.5, position="identity") +
+    xlab("wage per hour in cents") + 
+    ylab("respondent count") +
+    labs(caption= "Figure 2: Histogram to assess the distribution of the dependent variable for each sex") + 
+    theme(plot.caption = element_text(hjust=0.5, size=rel(1)))
+
+
+ggplot(hourly_paid_adults, aes(x=sex, y=wage_per_hour, fill=sex)) + 
+    geom_boxplot(alpha=0.3) +
+    theme(legend.position="none") +
+    scale_fill_brewer(palette="BuPu") +
+    ylim(0, 6000) +
+    ylab("Wage per Hou? in Cent")+
+    labs(caption= "Figure 3: Boxplot with hourly wages for the sexes (21 outliers truncated for scale)") + 
+    theme(plot.caption = element_text(hjust=0.5, size=rel(1)))
+
+with(hourly_paid_adults, tapply(wage_per_hour, sex, median, na.rm=TRUE))
+
+wcoxdifference_test <- wilcox.test(wage_per_hour ~ sex, alternative="two.sided", data=hourly_paid_adults)
+wcoxdifference_test
+
+```
+
+
+HYPOTHESIS 2
+
+```{r}
+count(phds$sex)
+count(all_data$sex)
+#count(all_data$sex) - count(phds$sex)
+
+.Table <- matrix(c(173,443,37991,33113), 2, 2, byrow=TRUE)
+dimnames(.Table) <- list("education"=c("PhD", "No PhD"), "sex"=c("Female", "Male"))
+.Table  # Counts
+.Test <- chisq.test(.Table, correct=FALSE)
+.Test
+xtable(.Table)
+```
+
+HYPOTHESIS 3
+
+```{r }
+regression.model <- lm((hourly_paid_adults$wage_per_hour)~(hourly_paid_adults$age_),data=hourly_paid_adults)
+par(mfrow=c(2,2))
+plot(regression.model)
+mtext("Figure 3: Diagnostic Plots without transformation", side=3, outer=TRUE, line=-27)
+
+log10regression.model <- lm(log10(hourly_paid_adults$wage_per_hour)~(hourly_paid_adults$age_),data=hourly_paid_adults)
+par(mfrow=c(2,2))
+plot(log10regression.model)
+mtext("Figure 4: Diagnostic Plots with log10 transformation", side=3, outer=TRUE, line=-27)
+summary(regression.model)
+ ggplot(hourly_paid_adults, aes(x=hourly_paid_adults$age, y=log10(hourly_paid_adults$wage_per_hour))) + 
+  geom_point( color="#69b3a2") +
+  geom_smooth(method=lm , color="red", se=FALSE) +
+  ylab("log10-transformed Wage per hour") +
+  xlab("Age of respondents") +
+  labs(?aption= 'Figure 5: Scatterplot of log10-transformed hourly wage by age with regression line') + 
+  theme(plot.caption = element_text(hjust=0.5, size=rel(1)))
+```
+
+HYPOTHESIS 4
+
+```{r}
+ktest <-kruskal.test(hourly_paid_adults$wage_per_hour , hourly_paid_adults$race)
+ktest
+
+with(hourly_paid_adults, tapply(wage_per_hour, race, median, na.rm=TRUE))
+
+wage_race <- kruskalmc(hourly_paid_adults$wage_per_hour, hourly_paid_adults$race, probs = 0.05, cont=NULL)
+
+wage_race
+
+ggplot(hourly_paid_adults, aes(x=race, y=wage_per_hour, fill=race)) + 
+    geom_boxplot(alpha=0.3, outlier.shape=NA) +
+    theme(legend.position="none") +
+    scale_fill_brewer(palette="BuPu") +
+    ylim(0, 2500) +
+    coord_flip()+
+    ylab("Hourly Wage in Cents")+
+    labs(caption= "Figure 6: Boxplot of hourly wage and race of respdondents") + 
+    theme(plot.caption = element_text(hjust=0, size=rel(1)))
+
+```
+
+
+
+
+
+
